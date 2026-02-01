@@ -12,14 +12,21 @@ export default function App() {
   useEffect(() => {
     const handleDeepLink = async (event) => {
       let data = event.url;
-      if (data) {
-        if (data.startsWith('content://') || data.startsWith('file://')) {
-          setTimeout(() => {
-            if (navRef.current && navRef.current.isReady()) {
-              navRef.current.navigate('PdfViewer', { uri: data, name: 'Documento Externo', fromIntent: true });
-            }
-          }, 1000); // Check if navigation is ready
-        }
+      if (data && (data.startsWith('content://') || data.startsWith('file://'))) {
+        // Function to attempt navigation
+        const attemptNavigation = (retries = 0) => {
+          // Limit retries to avoid infinite loops (e.g. 20 retries * 100ms = 2 seconds)
+          if (retries > 20) return;
+
+          if (navRef.current && navRef.current.isReady()) {
+            navRef.current.navigate('PdfViewer', { uri: data, name: 'Documento Externo', fromIntent: true });
+          } else {
+            // Retry after 100ms if navigation is not ready
+            setTimeout(() => attemptNavigation(retries + 1), 100);
+          }
+        };
+
+        attemptNavigation();
       }
     };
 

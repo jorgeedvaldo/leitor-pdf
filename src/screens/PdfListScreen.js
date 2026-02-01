@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { FileText, Clock, Star } from 'lucide-react-native';
+import { FileText, Clock, Star, Folder } from 'lucide-react-native';
 import { theme } from '../utils/theme';
 import { getRecents, getFavorites } from '../utils/storage';
 import * as MediaLibrary from 'expo-media-library';
 
 export default function PdfListScreen({ route, navigation }) {
-    const { type } = route.params;
+    const { type, items, title } = route.params;
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [permissionResponse, requestPermission] = MediaLibrary.usePermissions();
@@ -22,8 +22,14 @@ export default function PdfListScreen({ route, navigation }) {
             const favorites = await getFavorites();
             setData(favorites);
             setLoading(false);
+        } else if (type === 'folder') {
+            // Data passed from parent folder
+            if (items) {
+                setData(items);
+            }
+            setLoading(false);
         } else if (type === 'all') {
-            // Logic for All Files
+            // Logic for All Files - Group by Folder
             if (!permissionResponse?.granted) {
                 const perm = await requestPermission();
                 if (!perm.granted) {
@@ -35,26 +41,53 @@ export default function PdfListScreen({ route, navigation }) {
 
             try {
                 const assets = await MediaLibrary.getAssetsAsync({
-                    mediaType: ['unknown'], // PDFs are often unknown or we check extension
-                    extensions: ['.pdf'], // Filter by extension directly if supported or filter later
-                    first: 100, // Limit for now
+                    mediaType: ['unknown'],
+                    first: 1000, // Increased limit
                     sortBy: ['modificationTime']
                 });
 
-                // Expo MediaLibrary 'extensions' option might not work for unknown types on all versions, 
-                // but let's try. If not, we filter manually.
                 let files = assets.assets;
 
-                // Manual filter if needed (double check)
+                // Filter for PDFs
                 files = files.filter(f => f.filename.toLowerCase().endsWith('.pdf'));
 
-                const mapped = files.map(f => ({
-                    uri: f.uri,
-                    name: f.filename,
-                    id: f.id,
-                    date: f.modificationTime
-                }));
-                setData(mapped);
+                // Group by folders
+                const foldersMap = {};
+
+                files.forEach(file => {
+                    // Extract directory path. 
+                    // Note: 'uri' usually looks like file:///storage/emulated/0/Download/file.pdf
+                    const uri = file.uri;
+                    const lastSlashIndex = uri.lastIndexOf('/');
+                    const parentDir = uri.substring(0, lastSlashIndex);
+                    // Get folder name (e.g. 'Download')
+                    // Handle potential trailing slash or root
+                    const parentDirName = parentDir.split('/').pop() || 'Root';
+
+                    if (!foldersMap[parentDir]) {
+                        foldersMap[parentDir] = {
+                            id: parentDir,
+                            name: parentDirName,
+                            path: parentDir,
+                            count: 0,
+                            items: [],
+                            isFolder: true
+                        };
+                    }
+
+                    foldersMap[parentDir].items.push({
+                        uri: file.uri,
+                        name: file.filename,
+                        id: file.id,
+                        date: file.modificationTime,
+                        isFolder: false
+                    });
+                    foldersMap[parentDir].count++;
+                });
+
+                const folderList = Object.values(foldersMap).sort((a, b) => a.name.localeCompare(b.name));
+                setData(folderList);
+
             } catch (e) {
                 console.error(e);
                 Alert.alert('Erro', 'Não foi possível carregar os arquivos.');
@@ -64,24 +97,44 @@ export default function PdfListScreen({ route, navigation }) {
         }
     };
 
-    // Reload when screen gains focus (e.g. back from viewer)
+    // Reload when screen gains focus
     useFocusEffect(
         useCallback(() => {
             loadData();
-        }, [type, permissionResponse]) // Dependency on permission to retry if granted
+        }, [type, permissionResponse, items])
     );
+
+    const handleItemPress = (item) => {
+        if (item.isFolder) {
+            navigation.push('PdfList', {
+                type: 'folder',
+                title: item.name,
+                items: item.items
+            });
+        } else {
+            navigation.navigate('PdfViewer', { uri: item.uri, name: item.name });
+        }
+    };
 
     const renderItem = ({ item }) => (
         <TouchableOpacity
             style={styles.item}
-            onPress={() => navigation.navigate('PdfViewer', { uri: item.uri, name: item.name })}
+            onPress={() => handleItemPress(item)}
         >
             <View style={styles.iconContainer}>
-                <FileText color={theme.colors.primary} size={24} />
+                {item.isFolder ? (
+                    <Folder color={theme.colors.primary} size={28} />
+                ) : (
+                    <FileText color={theme.colors.textSecondary} size={24} />
+                )}
             </View>
             <View style={styles.textContainer}>
                 <Text style={styles.itemTitle} numberOfLines={1}>{item.name}</Text>
-                <Text style={styles.itemSubtitle}>{item.uri.split('/').slice(0, -1).pop()}</Text>
+                {item.isFolder ? (
+                    <Text style={styles.itemSubtitle}>{item.count} arquivo(s)</Text>
+                ) : (
+                    <Text style={styles.itemSubtitle}>{item.uri.split('/').slice(0, -1).pop()}</Text>
+                )}
             </View>
         </TouchableOpacity>
     );
@@ -102,7 +155,7 @@ export default function PdfListScreen({ route, navigation }) {
                 <FlatList
                     data={data}
                     renderItem={renderItem}
-                    keyExtractor={(item, index) => item.uri + index}
+                    keyExtractor={(item, index) => (item.id || item.uri) + index}
                     contentContainerStyle={styles.listContent}
                     ListEmptyComponent={EmptyComponent}
                 />
@@ -135,6 +188,8 @@ const styles = StyleSheet.create({
     },
     iconContainer: {
         marginRight: theme.spacing.m,
+        width: 40,
+        alignItems: 'center',
     },
     textContainer: {
         flex: 1,
