@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Platform, PermissionsAndroid } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { FileText, Clock, Star, Folder } from 'lucide-react-native';
 import { theme } from '../utils/theme';
 import { getRecents, getFavorites } from '../utils/storage';
-import * as MediaLibrary from 'expo-media-library';
+import * as IntentLauncher from 'expo-intent-launcher';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 
 export default function PdfListScreen({ route, navigation }) {
-    const { type, items, title } = route.params;
+    const { type, items, title, path } = route.params;
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [permissionResponse, requestPermission] = MediaLibrary.usePermissions();
 
     const loadData = async () => {
         setLoading(true);
@@ -22,75 +22,81 @@ export default function PdfListScreen({ route, navigation }) {
             const favorites = await getFavorites();
             setData(favorites);
             setLoading(false);
-        } else if (type === 'folder') {
-            // Data passed from parent folder
-            if (items) {
-                setData(items);
-            }
-            setLoading(false);
-        } else if (type === 'all') {
-            // Logic for All Files - Group by Folder
-            if (!permissionResponse?.granted) {
-                const perm = await requestPermission();
-                if (!perm.granted) {
-                    Alert.alert('Permissão necessária', 'Precisamos de permissão para aceder aos seus arquivos.');
-                    setLoading(false);
-                    return;
+        } else if (type === 'all' || type === 'folder_explorer') {
+            const currentPath = type === 'all' ? '/storage/emulated/0' : path;
+
+            if (Platform.OS === 'android') {
+                if (Platform.Version >= 30) {
+                    try {
+                        await ReactNativeBlobUtil.fs.ls('/storage/emulated/0/Download');
+                    } catch (e) {
+                        Alert.alert(
+                            "Permissão Necessária",
+                            "Para ler todas as pastas, o aplicativo precisa de acesso a todos os arquivos nas configurações.",
+                            [
+                                { text: "Cancelar", style: "cancel" },
+                                {
+                                    text: "Abrir Configurações", onPress: () => {
+                                        IntentLauncher.startActivityAsync('android.settings.MANAGE_APP_ALL_FILES_ACCESS_PERMISSION', {
+                                            data: `package:com.leitorpdf.app`
+                                        });
+                                    }
+                                }
+                            ]
+                        );
+                        setLoading(false);
+                        return;
+                    }
+                } else {
+                    const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE);
+                    if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+                        Alert.alert('Erro', 'Permissão negada.');
+                        setLoading(false);
+                        return;
+                    }
                 }
             }
 
             try {
-                const assets = await MediaLibrary.getAssetsAsync({
-                    mediaType: ['unknown'],
-                    first: 1000, // Increased limit
-                    sortBy: ['modificationTime']
-                });
-
-                let files = assets.assets;
-
-                // Filter for PDFs
-                files = files.filter(f => f.filename.toLowerCase().endsWith('.pdf'));
-
-                // Group by folders
-                const foldersMap = {};
+                const files = await ReactNativeBlobUtil.fs.lstat(currentPath);
+                let folderList = [];
+                let pdfList = [];
 
                 files.forEach(file => {
-                    // Extract directory path. 
-                    // Note: 'uri' usually looks like file:///storage/emulated/0/Download/file.pdf
-                    const uri = file.uri;
-                    const lastSlashIndex = uri.lastIndexOf('/');
-                    const parentDir = uri.substring(0, lastSlashIndex);
-                    // Get folder name (e.g. 'Download')
-                    // Handle potential trailing slash or root
-                    const parentDirName = parentDir.split('/').pop() || 'Root';
+                    const isHidden = file.filename.startsWith('.');
+                    if (isHidden) return;
 
-                    if (!foldersMap[parentDir]) {
-                        foldersMap[parentDir] = {
-                            id: parentDir,
-                            name: parentDirName,
-                            path: parentDir,
-                            count: 0,
-                            items: [],
-                            isFolder: true
-                        };
+                    if (file.type === 'dir') {
+                        // Exclude Android root data/obb folders to avoid confusion
+                        if (currentPath === '/storage/emulated/0' && (file.filename === 'Android' || file.filename === 'data')) return;
+
+                        folderList.push({
+                            uri: 'file://' + file.path,
+                            name: file.filename,
+                            id: file.path,
+                            date: file.lastModified,
+                            isFolder: true,
+                            path: file.path
+                        });
+                    } else if (file.type === 'file' && file.filename.toLowerCase().endsWith('.pdf')) {
+                        pdfList.push({
+                            uri: 'file://' + file.path,
+                            name: file.filename,
+                            id: file.path,
+                            date: file.lastModified,
+                            isFolder: false,
+                            path: file.path
+                        });
                     }
-
-                    foldersMap[parentDir].items.push({
-                        uri: file.uri,
-                        name: file.filename,
-                        id: file.id,
-                        date: file.modificationTime,
-                        isFolder: false
-                    });
-                    foldersMap[parentDir].count++;
                 });
 
-                const folderList = Object.values(foldersMap).sort((a, b) => a.name.localeCompare(b.name));
-                setData(folderList);
+                folderList.sort((a, b) => a.name.localeCompare(b.name));
+                pdfList.sort((a, b) => a.name.localeCompare(b.name));
 
+                setData([...folderList, ...pdfList]);
             } catch (e) {
                 console.error(e);
-                Alert.alert('Erro', 'Não foi possível carregar os arquivos.');
+                Alert.alert('Erro', 'Não foi possível carregar esta pasta.');
             } finally {
                 setLoading(false);
             }
@@ -101,15 +107,15 @@ export default function PdfListScreen({ route, navigation }) {
     useFocusEffect(
         useCallback(() => {
             loadData();
-        }, [type, permissionResponse, items])
+        }, [type, path, items])
     );
 
     const handleItemPress = (item) => {
         if (item.isFolder) {
             navigation.push('PdfList', {
-                type: 'folder',
+                type: 'folder_explorer',
                 title: item.name,
-                items: item.items
+                path: item.path
             });
         } else {
             navigation.navigate('PdfViewer', { uri: item.uri, name: item.name });
@@ -131,9 +137,9 @@ export default function PdfListScreen({ route, navigation }) {
             <View style={styles.textContainer}>
                 <Text style={styles.itemTitle} numberOfLines={1}>{item.name}</Text>
                 {item.isFolder ? (
-                    <Text style={styles.itemSubtitle}>{item.count} arquivo(s)</Text>
+                    <Text style={styles.itemSubtitle}>Pasta</Text>
                 ) : (
-                    <Text style={styles.itemSubtitle}>{item.uri.split('/').slice(0, -1).pop()}</Text>
+                    <Text style={styles.itemSubtitle}>PDF Document</Text>
                 )}
             </View>
         </TouchableOpacity>

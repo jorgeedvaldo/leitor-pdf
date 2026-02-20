@@ -26,6 +26,10 @@
       "intentFilters": [
         {
           "action": "VIEW",
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ],
           "data": {
             "scheme": "file",
             "mimeType": "application/pdf"
@@ -33,6 +37,10 @@
         },
         {
           "action": "VIEW",
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ],
           "data": {
             "scheme": "content",
             "mimeType": "application/pdf"
@@ -42,6 +50,7 @@
       "permissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.MANAGE_EXTERNAL_STORAGE",
         "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
         "android.permission.ACCESS_MEDIA_LOCATION",
         "android.permission.READ_MEDIA_IMAGES",
