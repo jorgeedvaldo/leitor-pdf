@@ -22,8 +22,8 @@ export default function PdfListScreen({ route, navigation }) {
             const favorites = await getFavorites();
             setData(favorites);
             setLoading(false);
-        } else if (type === 'all' || type === 'folder_explorer') {
-            const currentPath = type === 'all' ? '/storage/emulated/0' : path;
+        } else if (type === 'all' || type === 'folder_explorer' || type === 'search') {
+            const currentPath = type === 'all' || type === 'search' ? '/storage/emulated/0' : path;
 
             if (Platform.OS === 'android') {
                 if (Platform.Version >= 30) {
@@ -58,42 +58,78 @@ export default function PdfListScreen({ route, navigation }) {
             }
 
             try {
-                const files = await ReactNativeBlobUtil.fs.lstat(currentPath);
-                let folderList = [];
-                let pdfList = [];
+                if (type === 'search') {
+                    const query = route.params.query || '';
+                    let tempResults = [];
+                    let queue = ['/storage/emulated/0'];
+                    let maxDirs = 200; // prevent too long search
+                    let dirsChecked = 0;
 
-                files.forEach(file => {
-                    const isHidden = file.filename.startsWith('.');
-                    if (isHidden) return;
+                    while (queue.length > 0 && dirsChecked < maxDirs) {
+                        let p = queue.shift();
+                        dirsChecked++;
+                        try {
+                            const files = await ReactNativeBlobUtil.fs.lstat(p);
+                            for (let file of files) {
+                                if (file.filename.startsWith('.') || file.filename === 'Android' || file.filename === 'data') continue;
 
-                    if (file.type === 'dir') {
-                        // Exclude Android root data/obb folders to avoid confusion
-                        if (currentPath === '/storage/emulated/0' && (file.filename === 'Android' || file.filename === 'data')) return;
-
-                        folderList.push({
-                            uri: 'file://' + file.path,
-                            name: file.filename,
-                            id: file.path,
-                            date: file.lastModified,
-                            isFolder: true,
-                            path: file.path
-                        });
-                    } else if (file.type === 'file' && file.filename.toLowerCase().endsWith('.pdf')) {
-                        pdfList.push({
-                            uri: 'file://' + file.path,
-                            name: file.filename,
-                            id: file.path,
-                            date: file.lastModified,
-                            isFolder: false,
-                            path: file.path
-                        });
+                                if (file.type === 'dir') {
+                                    queue.push(file.path);
+                                } else if (file.type === 'file' && file.filename.toLowerCase().endsWith('.pdf')) {
+                                    if (file.filename.toLowerCase().includes(query.toLowerCase())) {
+                                        tempResults.push({
+                                            uri: 'file://' + file.path,
+                                            name: file.filename,
+                                            id: file.path,
+                                            date: file.lastModified,
+                                            isFolder: false,
+                                            path: file.path
+                                        });
+                                    }
+                                }
+                            }
+                        } catch (e) { }
                     }
-                });
+                    tempResults.sort((a, b) => a.name.localeCompare(b.name));
+                    setData(tempResults);
+                } else {
+                    const files = await ReactNativeBlobUtil.fs.lstat(currentPath);
+                    let folderList = [];
+                    let pdfList = [];
 
-                folderList.sort((a, b) => a.name.localeCompare(b.name));
-                pdfList.sort((a, b) => a.name.localeCompare(b.name));
+                    files.forEach(file => {
+                        const isHidden = file.filename.startsWith('.');
+                        if (isHidden) return;
 
-                setData([...folderList, ...pdfList]);
+                        if (file.type === 'dir') {
+                            // Exclude Android root data/obb folders to avoid confusion
+                            if (currentPath === '/storage/emulated/0' && (file.filename === 'Android' || file.filename === 'data')) return;
+
+                            folderList.push({
+                                uri: 'file://' + file.path,
+                                name: file.filename,
+                                id: file.path,
+                                date: file.lastModified,
+                                isFolder: true,
+                                path: file.path
+                            });
+                        } else if (file.type === 'file' && file.filename.toLowerCase().endsWith('.pdf')) {
+                            pdfList.push({
+                                uri: 'file://' + file.path,
+                                name: file.filename,
+                                id: file.path,
+                                date: file.lastModified,
+                                isFolder: false,
+                                path: file.path
+                            });
+                        }
+                    });
+
+                    folderList.sort((a, b) => a.name.localeCompare(b.name));
+                    pdfList.sort((a, b) => a.name.localeCompare(b.name));
+
+                    setData([...folderList, ...pdfList]);
+                }
             } catch (e) {
                 console.error(e);
                 Alert.alert('Erro', 'Não foi possível carregar esta pasta.');

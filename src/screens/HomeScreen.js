@@ -1,24 +1,58 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, BackHandler, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Clock, Star, FileText, Info, X } from 'lucide-react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, BackHandler, ScrollView, FlatList, TextInput } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { X, Search, FileText, Clock } from 'lucide-react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { theme } from '../utils/theme';
+import { getRecents } from '../utils/storage';
 
 export default function HomeScreen({ navigation }) {
+    const insets = useSafeAreaInsets();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [recentFiles, setRecentFiles] = useState([]);
 
     const handleCloseApp = () => {
         BackHandler.exitApp();
     };
 
-    const menuItems = [
-        { title: 'Recentes', icon: Clock, screen: 'PdfList', params: { type: 'recents', title: 'Recentes' }, color: '#EF5350' },
-        { title: 'Favoritos', icon: Star, screen: 'PdfList', params: { type: 'favorites', title: 'Favoritos' }, color: '#FFA726' },
-        { title: 'Todos os Ficheiros', icon: FileText, screen: 'PdfList', params: { type: 'all', title: 'Todos os Ficheiros' }, color: '#42A5F5' },
-        { title: 'Info', icon: Info, screen: 'Info', params: {}, color: '#78909C' },
-    ];
+    useFocusEffect(
+        useCallback(() => {
+            const loadRecents = async () => {
+                const recents = await getRecents();
+                setRecentFiles(recents.slice(0, 5)); // Show up to 5 recent files
+            };
+            loadRecents();
+        }, [])
+    );
+
+    const handleSearch = () => {
+        if (searchQuery.trim().length > 0) {
+            navigation.navigate('PdfList', {
+                type: 'search',
+                title: 'Pesquisa',
+                query: searchQuery
+            });
+            setSearchQuery('');
+        }
+    };
+
+    const renderRecentItem = ({ item }) => (
+        <TouchableOpacity
+            style={styles.recentItem}
+            onPress={() => navigation.navigate('PdfViewer', { uri: item.uri, name: item.name })}
+        >
+            <View style={styles.recentIconContainer}>
+                <FileText color={theme.colors.primary} size={24} />
+            </View>
+            <View style={styles.recentTextContainer}>
+                <Text style={styles.recentItemTitle} numberOfLines={1}>{item.name}</Text>
+                <Text style={styles.recentItemSubtitle}>PDF Document</Text>
+            </View>
+        </TouchableOpacity>
+    );
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={[styles.container, { paddingTop: insets.top, paddingBottom: 0 }]}>
             {/* Header */}
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Leitor PDF</Text>
@@ -28,25 +62,45 @@ export default function HomeScreen({ navigation }) {
             </View>
 
             {/* Content */}
-            <ScrollView contentContainerStyle={styles.content}>
-                <View style={styles.grid}>
-                    {menuItems.map((item, index) => (
-                        <TouchableOpacity
-                            key={index}
-                            style={[styles.card, { borderLeftColor: item.color }]}
-                            onPress={() => navigation.navigate(item.screen, item.params)}
-                        >
-                            <View style={[styles.iconContainer, { backgroundColor: item.color + '20' }]}>
-                                <item.icon color={item.color} size={32} />
-                            </View>
-                            <Text style={styles.cardTitle}>{item.title}</Text>
-                        </TouchableOpacity>
-                    ))}
+            <View style={styles.content}>
+                {/* Search Bar */}
+                <View style={styles.searchContainer}>
+                    <Search color={theme.colors.textSecondary} size={20} style={styles.searchIcon} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Pesquisar PDF no telemóvel..."
+                        placeholderTextColor={theme.colors.textSecondary}
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        onSubmitEditing={handleSearch}
+                        returnKeyType="search"
+                    />
                 </View>
-            </ScrollView>
 
-            <Text style={styles.footerText}>PDF Reader App © 2026</Text>
-        </SafeAreaView>
+                {/* Recent Files */}
+                <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Arquivos Recentes</Text>
+                    <TouchableOpacity onPress={() => navigation.navigate('FilesTab', { screen: 'PdfList', params: { type: 'recents', title: 'Recentes' } })}>
+                        <Text style={styles.seeAllText}>Ver todos</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {recentFiles.length > 0 ? (
+                    <FlatList
+                        data={recentFiles}
+                        renderItem={renderRecentItem}
+                        keyExtractor={(item, index) => (item.id || item.uri) + index}
+                        contentContainerStyle={styles.recentListContent}
+                        showsVerticalScrollIndicator={false}
+                    />
+                ) : (
+                    <View style={styles.emptyContainer}>
+                        <Clock color={theme.colors.textSecondary} size={48} />
+                        <Text style={styles.emptyText}>Nenhum arquivo recente.</Text>
+                    </View>
+                )}
+            </View>
+        </View>
     );
 }
 
@@ -72,40 +126,84 @@ const styles = StyleSheet.create({
         padding: theme.spacing.xs,
     },
     content: {
+        flex: 1,
         padding: theme.spacing.m,
-        flexGrow: 1,
     },
-    grid: {
+    searchContainer: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
-    },
-    card: {
-        width: '48%',
-        backgroundColor: theme.colors.surface,
-        padding: theme.spacing.l,
-        marginBottom: theme.spacing.m,
-        borderRadius: theme.borderRadius.l,
         alignItems: 'center',
-        justifyContent: 'center',
-        elevation: 2,
-        borderLeftWidth: 4,
+        backgroundColor: theme.colors.surface,
+        borderRadius: theme.borderRadius.m,
+        paddingHorizontal: theme.spacing.m,
+        marginBottom: theme.spacing.xl,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
     },
-    iconContainer: {
-        padding: theme.spacing.m,
-        borderRadius: 50,
+    searchIcon: {
+        marginRight: theme.spacing.s,
+    },
+    searchInput: {
+        flex: 1,
+        height: 50,
+        fontSize: 16,
+        color: theme.colors.text,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: theme.spacing.m,
     },
-    cardTitle: {
-        fontSize: 16,
-        fontWeight: '600',
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
         color: theme.colors.text,
-        textAlign: 'center',
     },
-    footerText: {
-        textAlign: 'center',
+    seeAllText: {
+        color: theme.colors.primary,
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    recentListContent: {
+        paddingBottom: theme.spacing.xl,
+    },
+    recentItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
         padding: theme.spacing.m,
-        color: theme.colors.textSecondary,
+        backgroundColor: theme.colors.surface,
+        marginBottom: theme.spacing.s,
+        borderRadius: theme.borderRadius.m,
+        elevation: 1,
+    },
+    recentIconContainer: {
+        marginRight: theme.spacing.m,
+        backgroundColor: theme.colors.primaryLight,
+        padding: theme.spacing.s,
+        borderRadius: theme.borderRadius.s,
+    },
+    recentTextContainer: {
+        flex: 1,
+    },
+    recentItemTitle: {
+        fontSize: 16,
+        color: theme.colors.text,
+        fontWeight: '500',
+    },
+    recentItemSubtitle: {
         fontSize: 12,
+        color: theme.colors.textSecondary,
+        marginTop: 2,
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 50,
+    },
+    emptyText: {
+        color: theme.colors.textSecondary,
+        fontSize: 16,
+        marginTop: theme.spacing.m,
     }
 });
