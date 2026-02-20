@@ -13,7 +13,10 @@ const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 export const navRef = createNavigationContainerRef();
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 function MainTabNavigator() {
+    const insets = useSafeAreaInsets();
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
@@ -33,8 +36,8 @@ function MainTabNavigator() {
                 tabBarActiveTintColor: theme.colors.primary,
                 tabBarInactiveTintColor: theme.colors.textSecondary,
                 tabBarStyle: {
-                    paddingBottom: 5,
-                    height: 60,
+                    paddingBottom: Math.max(insets.bottom, 5),
+                    height: 60 + insets.bottom,
                 },
             })}
         >
