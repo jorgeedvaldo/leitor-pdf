@@ -4,10 +4,26 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
 import { Alert, Platform, PermissionsAndroid } from 'react-native';
 import * as IntentLauncher from 'expo-intent-launcher';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import AppNavigator, { navRef } from './src/navigation/AppNavigator';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 SplashScreen.preventAutoHideAsync();
+
+const getFileNameFromUri = (uri) => {
+  try {
+    const decoded = decodeURIComponent(uri);
+    // Try to find a filename ending in .pdf anywhere in the URI
+    const match = decoded.match(/([^/\\]+\.pdf)/i);
+    if (match) return match[1];
+    // Fall back to last path segment
+    const segments = decoded.split('/');
+    const last = segments[segments.length - 1];
+    return last || 'Documento';
+  } catch {
+    return 'Documento';
+  }
+};
 
 export default function App() {
 
@@ -71,7 +87,7 @@ export default function App() {
           if (retries > 20) return;
 
           if (navRef.current && navRef.current.isReady()) {
-            navRef.current.navigate('PdfViewer', { uri: data, name: 'Documento Externo', fromIntent: true });
+            navRef.current.navigate('PdfViewer', { uri: data, name: getFileNameFromUri(data), fromIntent: true });
           } else {
             // Retry after 100ms if navigation is not ready
             setTimeout(() => attemptNavigation(retries + 1), 100);
