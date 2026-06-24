@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Background circle -->
+  <circle cx="512" cy="512" r="512" fill="#E53935"/>
+
+  <!-- Document shape (white paper) -->
+  <rect x="248" y="192" width="420" height="544" rx="28" ry="28" fill="#FFFFFF"/>
+
+  <!-- Folded corner -->
+  <path d="M568 192 L668 292 L568 292 Z" fill="#FFCDD2"/>
+  <path d="M568 192 L668 292 L568 292 Z" fill="none" stroke="#E53935" stroke-width="0" />
+  <!-- Corner fold overlap cover -->
+  <path d="M568 192 L668 192 L668 292 Z" fill="#FFFFFF"/>
+  <!-- Corner fold triangle visible part -->
+  <path d="M568 192 L668 292 L568 292 Z" fill="#FFCDD2"/>
+
+  <!-- Red PDF label band -->
+  <rect x="248" y="560" width="420" height="176" rx="0" ry="0" fill="#E53935"/>
+  <rect x="248" y="560" width="420" height="176" rx="0" ry="0"
+        clip-path="url(#docClip)" fill="#C62828"/>
+  <clipPath id="docClip">
+    <rect x="248" y="192" width="420" height="544" rx="28" ry="28"/>
+  </clipPath>
+
+  <!-- "PDF" text in white on red band -->
+  <text x="458" y="678"
+        font-family="Arial Black, Arial, sans-serif"
+        font-weight="900"
+        font-size="118"
+        fill="#FFFFFF"
+        text-anchor="middle"
+        letter-spacing="-2">PDF</text>
+
+  <!-- Horizontal lines (text lines on document) -->
+  <rect x="296" y="332" width="240" height="18" rx="9" fill="#FFCDD2"/>
+  <rect x="296" y="372" width="320" height="18" rx="9" fill="#FFCDD2"/>
+  <rect x="296" y="412" width="280" height="18" rx="9" fill="#FFCDD2"/>
+  <rect x="296" y="452" width="200" height="18" rx="9" fill="#FFCDD2"/>
+
+  <!-- Magnifying glass -->
+  <circle cx="680" cy="720" r="110" fill="none" stroke="#FFFFFF" stroke-width="36"/>
+  <circle cx="680" cy="720" r="110" fill="none" stroke="#C62828" stroke-width="8"/>
+  <line x1="762" y1="802" x2="840" y2="880" stroke="#FFFFFF" stroke-width="44" stroke-linecap="round"/>
+  <line x1="762" y1="802" x2="840" y2="880" stroke="#C62828" stroke-width="8" stroke-linecap="round"/>
+  <!-- Shine on magnifying glass -->
+  <circle cx="648" cy="688" r="22" fill="rgba(255,255,255,0.35)"/>
+</svg>
