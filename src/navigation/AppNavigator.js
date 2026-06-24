@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Home, Folder, Star, Info } from 'lucide-react-native';
 import HomeScreen from '../screens/HomeScreen';
 import PdfListScreen from '../screens/PdfListScreen';
+import FileExplorerScreen from '../screens/FileExplorerScreen';
 import PdfViewerScreen from '../screens/PdfViewerScreen';
 import InfoScreen from '../screens/InfoScreen';
 import { theme } from '../utils/theme';
@@ -48,9 +49,8 @@ function MainTabNavigator() {
             />
             <Tab.Screen
                 name="FilesTab"
-                component={PdfListScreen}
-                initialParams={{ type: 'all', title: 'Todos os Ficheiros' }}
-                options={{ title: 'Files' }}
+                component={FileExplorerScreen}
+                options={{ title: 'Ficheiros', headerTitle: 'Explorador de Ficheiros' }}
             />
             <Tab.Screen
                 name="FavoritesTab"
