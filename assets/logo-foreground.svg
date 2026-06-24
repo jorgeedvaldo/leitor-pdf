@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!--
+    Foreground only — background colour (#E53935) is set in app.json.
+    Content is scaled/centred to stay within the Android adaptive icon
+    safe zone (centre 66% = ~676 px).
+  -->
+
+  <!-- Document shape -->
+  <rect x="268" y="172" width="400" height="520" rx="26" ry="26" fill="#FFFFFF"/>
+
+  <!-- Folded corner -->
+  <path d="M568 172 L668 272 L568 272 Z" fill="#FFCDD2"/>
+  <path d="M568 172 L668 172 L668 272 Z" fill="#FFFFFF"/>
+  <path d="M568 172 L668 272 L568 272 Z" fill="#FFCDD2"/>
+
+  <!-- Red band at bottom of document -->
+  <rect x="268" y="540" width="400" height="152" rx="0" fill="#C62828"
+        clip-path="url(#fg-clip)"/>
+  <clipPath id="fg-clip">
+    <rect x="268" y="172" width="400" height="520" rx="26" ry="26"/>
+  </clipPath>
+
+  <!-- "PDF" label -->
+  <text x="468" y="648"
+        font-family="Arial Black, Arial, sans-serif"
+        font-weight="900"
+        font-size="112"
+        fill="#FFFFFF"
+        text-anchor="middle"
+        letter-spacing="-2">PDF</text>
+
+  <!-- Text lines -->
+  <rect x="308" y="312" width="220" height="16" rx="8" fill="#FFCDD2"/>
+  <rect x="308" y="350" width="300" height="16" rx="8" fill="#FFCDD2"/>
+  <rect x="308" y="388" width="260" height="16" rx="8" fill="#FFCDD2"/>
+  <rect x="308" y="426" width="180" height="16" rx="8" fill="#FFCDD2"/>
+
+  <!-- Magnifying glass -->
+  <circle cx="694" cy="726" r="104" fill="none" stroke="#FFFFFF" stroke-width="34"/>
+  <circle cx="694" cy="726" r="104" fill="none" stroke="#C62828" stroke-width="7"/>
+  <line x1="772" y1="806" x2="848" y2="882" stroke="#FFFFFF" stroke-width="42" stroke-linecap="round"/>
+  <line x1="772" y1="806" x2="848" y2="882" stroke="#C62828" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="662" cy="694" r="20" fill="rgba(255,255,255,0.3)"/>
+</svg>

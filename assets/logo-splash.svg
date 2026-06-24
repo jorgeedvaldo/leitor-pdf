@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!--
+    Splash icon — displayed on a red (#E53935) background.
+    White document with PDF label, no magnifying glass, centred.
+  -->
+
+  <!-- Document -->
+  <rect x="96" y="60" width="280" height="364" rx="20" ry="20" fill="#FFFFFF"/>
+
+  <!-- Folded corner -->
+  <path d="M296 60 L376 140 L296 140 Z" fill="#FFCDD2"/>
+  <path d="M296 60 L376 60  L376 140 Z" fill="#FFFFFF"/>
+  <path d="M296 60 L376 140 L296 140 Z" fill="#FFCDD2"/>
+
+  <!-- Red band -->
+  <rect x="96" y="318" width="280" height="106" rx="0" fill="#C62828"
+        clip-path="url(#sp-clip)"/>
+  <clipPath id="sp-clip">
+    <rect x="96" y="60" width="280" height="364" rx="20" ry="20"/>
+  </clipPath>
+
+  <!-- "PDF" -->
+  <text x="236" y="400"
+        font-family="Arial Black, Arial, sans-serif"
+        font-weight="900"
+        font-size="80"
+        fill="#FFFFFF"
+        text-anchor="middle"
+        letter-spacing="-1">PDF</text>
+
+  <!-- Text lines -->
+  <rect x="128" y="190" width="148" height="12" rx="6" fill="#FFCDD2"/>
+  <rect x="128" y="220" width="210" height="12" rx="6" fill="#FFCDD2"/>
+  <rect x="128" y="250" width="180" height="12" rx="6" fill="#FFCDD2"/>
+  <rect x="128" y="280" width="120" height="12" rx="6" fill="#FFCDD2"/>
+</svg>
